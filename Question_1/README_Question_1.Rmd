@@ -22,6 +22,7 @@ install.packages("pacman")
 pacman::p_load("tidyverse")
 pacman::p_load("lubdridate")
 pacman::p_load("stringr")
+pacman::p_load("ggridges")
 ```
 
 Wrangling the data so that a dataframe is created which only contains the correlation between the top 25 male and top 25 female names in the US in the current year and three years later for each year 1900 - 2011. Note: The years 2012 - 2014 had to be dropped, as those years had no rankings in three years time which they could be compared to.
@@ -118,6 +119,111 @@ popular_artists <- music_charts %>%
     #Selecting the most popular artist per decade
     slice_max(order_by = artist_popularity, n = 1, with_ties = FALSE) %>%
   ungroup()
+```
+
+Finding the most popular movie per decade
+```{r}
+popular_movies <- HBO_titles %>% 
+    
+    #Filtering for the relevant dates based on the baby name data, and using my decade function to create a variable which states the decade in which the movie was released
+    mutate(release_year = as.Date(paste0(release_year, "-01-01"))) %>% 
+    filter(release_year >= lubridate::ymd(19100101) & release_year <= lubridate:: ymd(20140101)) %>% 
+    decade(., release_year) %>% 
+    mutate(release_year = lubridate::year(release_year)) %>% 
+    
+    #Selecting the most popular movie per decade
+    group_by(decade) %>% 
+    slice_max(order_by = tmdb_popularity, n = 1, with_ties = F) %>% 
+    select(decade, tmdb_popularity, title, id) %>% 
+    ungroup()
+```
+
+Wrangling the HBO_credits data in the aim of finding the actors from the most popular movie per decade
+```{r}
+popular_actors <- HBO_credits %>% 
+    #Only keeping actors as directors usually don't become super famous
+    filter(role == "ACTOR") %>% 
+    select(id, name, character) %>% 
+    
+    #Filtering out any characters which were uncredited, as those actors wouldn't have had any popularity
+    filter(!str_detect(character, "\\(uncredited\\)")) %>% 
+    filter(!str_detect(character, "\\(Uncredited\\)"))
+```
+
+Finding the actors and characters from the most popular movie per decade
+```{r}
+#Combining the two datasets above, so that there is a list of actors and characters of each most popular movie
+popular_actors <- left_join(popular_movies, popular_actors, by = "id")
+
+#Creating a dataset of just the characters for each popular movie
+popular_characters <- popular_actors %>% 
+    select(-name) %>% 
+    filter(!is.na(character)) %>% 
+    
+    #Only keeping the first names of each character
+    mutate(character = word(character))
+
+#Creating a dataset of just the actors from each popular movie
+popular_actors <- popular_actors %>% 
+    select(-character) %>% 
+    
+    #Only keeping the first name of each actor 
+    mutate(name = word(name)) %>% 
+    filter(!is.na(name))
+```
+
+Ranking the most popular baby names per decade
+```{r}
+popular_names <- Baby_names %>% 
+     #Aggregating the count per names per state, so that count represents the number of babies given that name in that year in the entirety of the US. The state column is dropped by this function.
+    group_by(Year, Name, Gender) %>% 
+    summarise(Count = sum(Count)) %>% 
+    ungroup() %>% 
+    mutate(Year = as.Date(paste0(Year, "-01-01"))) %>% 
+    
+    #Using my decade function to create a decade column and from there calculate the most popular names per decade. I do this in a genderless manner as famous names may be given to a boy or a girl(there are observations of even John being a female name)
+    decade(., Year) %>% 
+    mutate(Year = lubridate::year(Year)) %>% 
+    group_by(Name, decade) %>%
+    summarise(Count = sum(Count)) %>% 
+    
+    #I log the Count variable as there is a large differnece in the absoloute values for different names, which makes graphs extremely difficult to visualise
+    mutate(Count = log(Count))
+```
+
+Manually selecting some famous names for analysis
+```{r}
+#Manually creating this vector of famous actors/characters/singers which I found in the datasets I created of the most popular type of the respective celebrity per decade(John and Paul are from the Beatles)
+famous_names <- c("Charlie", "Dorothy", "John", "Paul", "Mariah", "Elvis")
+
+#Creating a dataframe of the names which the famous people above had, and how those names' rankings changed over the decades
+famous_names_over_time <- popular_names %>% 
+    filter(Name %in% famous_names)
+```
+
+I attempted to create a ridgeline graph, however the counts were too big, and I could not find a way to scale each individual y-axis, so they did not provide much detail
+```{r}
+#name_ridgeline <- famous_names_over_time %>% 
+    #ggplot(aes(x = decade, y = Name, fill = Name)) +
+    #stat_density_ridges(stat = "identity", scale = 0.7, real_min_height = 0.001) +
+  #scale_x_continuous(breaks = c(seq(1910, 2010, 10), 2014)) +
+    #scale_y_continuous(limits = c(5000, NA)) +
+  #labs(
+    #title = "Popularity of Famous Names Over Time",
+    #x = "Decade",
+    #y = "Name"
+  #) +
+  #theme_bw()
+
+#name_ridgeline
+```
+
+A function which plots the Log Count of a list of names over time. It is intended to be accompanied with celebrity names, which are represented with a dot in the decade they were most famous(this information was gotten from the most popular actor/artist/character datasets that I created earlier). It takes a vector of first names matched with respective full celebrity names, and a vector of the first name of the celebrity with their respective decade of peak fame as arguments. 
+```{r}
+famous_names_over_time_plot <- plot_famous_names_over_time(famous_names_over_time, celebrity_names = c("Charlie" = "Charlie Chaplin", "Dorothy" = "Wizard of Oz Dorothy", "Elvis" = "Elvis Presley", "John" = "John Lennon", "Paul" = "Paul McCartney", "Mariah" = "Mariah Carey"), 
+label_decades = label_decades <- c( "Charlie" = 1920, "Dorothy" = 1930, "Elvis" = 1950, "John" = 1960, "Paul" = 1960, "Mariah" = 1990), start_year = 1910, end_year = 2010)
+
+famous_names_over_time_plot
 ```
 
 
