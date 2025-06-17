@@ -10,16 +10,18 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-Baby_names <- readRDS("data/US_Baby_names/Baby_Names_By_US_State.rds")
-music_charts <- readRDS("data/US_Baby_names/charts.rds")
-HBO_credits <- readRDS("data/US_Baby_names/HBO_credits.rds")
-HBO_titles <- readRDS("data/US_Baby_names/HBO_titles.rds")
+Baby_names <- readRDS("../data/PracData25/US_Baby_names/Baby_Names_By_US_State.rds")
+music_charts <- readRDS("../data/PracData25/US_Baby_names/charts.rds")
+HBO_credits <- readRDS("../data/PracData25/US_Baby_names/HBO_credits.rds")
+HBO_titles <- readRDS("../data/PracData25/US_Baby_names/HBO_titles.rds")
 ```
 
 Installing all necessary packages
 ```{r}
 install.packages("pacman")
 pacman::p_load("tidyverse")
+pacman::p_load("lubdridate")
+pacman::p_load("stringr")
 ```
 
 Wrangling the data so that a dataframe is created which only contains the correlation between the top 25 male and top 25 female names in the US in the current year and three years later for each year 1900 - 2011. Note: The years 2012 - 2014 had to be dropped, as those years had no rankings in three years time which they could be compared to.
@@ -45,7 +47,7 @@ spearman_rank_df <- Baby_names %>%
     .groups = "drop")      #Creating a column which is the correlation between the rankings of the top 25 boy names and top 25 girl names in that current year and 3 years later
 ```
 
-Doing the same data wrangling process, but for specifcally New York
+Doing the same data wrangling process, but specifically  for New York
 ```{r}
 spearman_rank_df_NY <- Baby_names %>% 
     filter(State == "NY") %>% 
@@ -72,20 +74,51 @@ spearman_rank_df <- left_join(x = spearman_rank_df, y = spearman_rank_df_NY, joi
 gather(Area, corr, c(US, NY))
 ```
 
+A function which creates a line graph of a correlation coefficient over time using ggplot. It takes several labels as arguments, as well as user-defined vertical lines to create emphasis in changes between years, etc. Here, it plots the correlation between popular names in the current period and popular names in three years time. I input 1990 and 2003 as vertical lines. 
 ```{r}
-persistance_graph <- spearman_rank_df %>% 
-    ggplot(aes(x=Year,y=corr,colour=Gender,linetype=Area))+
-	geom_line()+
-	theme_bw()+
-	geom_vline(xintercept=1990,linetype="longdash",alpha=0.6)+
-	geom_vline(xintercept=2003,alpha=0.6,linetype="longdash")+
-	scale_x_continuous(breaks=c(1910, 1925, 1950, 1975, 1990, 2003, 2011))+
-	labs(y='Persistence of names over time',title='Name persistence in the US ')
+persistance_graph <- correlation_over_time_graph(data = spearman_rank_df, x_label = "Year", y_label = "Persistence of Names Over Time", title = "Name Persistence In The US", x_breaks = c(1910, 1925, 1950, 1975, 1990, 2003, 2011), vlines = c(1990, 2003))
 
 persistance_graph
 ```
 
-
+Wrangling the data to identify the top music artists of each decade
+```{r}
+popular_artists <- music_charts %>% 
+    
+    #renaming the columns to fit R naming norms
+    rename(weeks_on_board = `weeks-on-board`, peak_rank = `peak-rank`) %>% 
+    mutate(date = as.Date(date)) %>% 
+    
+    #Using my decade function to create a column which takes on the value of the decade that date is in
+    decade(., date) %>% 
+    
+    #Filtering for relevant dates given the baby name data
+    filter(date >= lubridate::ymd(19100101) & date <= lubridate::ymd(20141231)) %>%
+    
+    #Removing features from artist names, and splitting up the observation if more than one main artist is credited
+    mutate(artist = str_remove(artist, regex(" featuring .*", ignore_case = T))) %>%
+    mutate(artist = str_remove(artist, regex( "With .*", ignore_case = T))) %>% 
+    separate_rows(artist, sep = " & ") %>%
+    separate_rows(artist, sep = ",") %>% 
+     mutate(artist = str_trim(artist)) %>% 
+    group_by(song) %>% 
+    
+    #Only keeping the last week which the song was on the charts, so that the "weeks_on_board" column represents the total number of weeks a song was ever on the charts for
+    filter(weeks_on_board == max(weeks_on_board)) %>% 
+    ungroup()  %>% 
+    
+    #Using my song ranking function to calculate an overall song ranking. It divides the total number of weeks a song was on the chart by the songs peak rank(so songs which got a high ranking(lower number) and a large number of weeks on the charts will have a high overall ranking)
+    song_ranking(weeks_on_board, peak_rank) %>% 
+    group_by(artist, decade) %>% 
+    
+    #Calculating an artists overall popularity by summing together the scores of all their songs on the charts
+    summarise(artist_popularity = sum(overall_song_rank)) %>% 
+    group_by(decade)%>% 
+    
+    #Selecting the most popular artist per decade
+    slice_max(order_by = artist_popularity, n = 1, with_ties = FALSE) %>%
+  ungroup()
+```
 
 
 
