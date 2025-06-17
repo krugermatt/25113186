@@ -1,0 +1,91 @@
+---
+title: "Question_1"
+author: "Matt Kruger"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+Baby_names <- readRDS("data/US_Baby_names/Baby_Names_By_US_State.rds")
+music_charts <- readRDS("data/US_Baby_names/charts.rds")
+HBO_credits <- readRDS("data/US_Baby_names/HBO_credits.rds")
+HBO_titles <- readRDS("data/US_Baby_names/HBO_titles.rds")
+```
+
+Installing all necessary packages
+```{r}
+install.packages("pacman")
+pacman::p_load("tidyverse")
+```
+
+Wrangling the data so that a dataframe is created which only contains the correlation between the top 25 male and top 25 female names in the US in the current year and three years later for each year 1900 - 2011. Note: The years 2012 - 2014 had to be dropped, as those years had no rankings in three years time which they could be compared to.
+```{r}
+spearman_rank_df <- Baby_names %>% 
+    group_by(Year, Name, Gender) %>% 
+    summarise(Count = sum(Count)) %>%  #Aggregating the count per names per state, so that count represents the number of babies given that name in that year in the entirety of the US. The state column is dropped by this function.
+    group_by(Year, Gender) %>% 
+    mutate(rank = rank(-Count)) %>%  #Ranking the baby names, with 1 being the most popular name in that year for its respective gender
+    ungroup() %>% 
+    filter(rank <= 25) %>%  #Only keeping the 25 most popular names per gender per year
+  mutate(Year_plus_3 = Year + 3) 
+
+
+  spearman_rank_df <- spearman_rank_df %>% 
+    left_join( spearman_rank_df %>%
+      select(Name, Gender, Year, future_rank = rank),    #Creating a column which is the rank of that name in three years time
+    by = c("Name", "Gender", "Year_plus_3" = "Year")) %>% 
+    filter(!is.na(future_rank)) %>% 
+    group_by(Year, Gender) %>% 
+    summarise(
+    corr = cor(rank, future_rank, method = "spearman", use = "complete.obs"),
+    .groups = "drop")      #Creating a column which is the correlation between the rankings of the top 25 boy names and top 25 girl names in that current year and 3 years later
+```
+
+Doing the same data wrangling process, but for specifcally New York
+```{r}
+spearman_rank_df_NY <- Baby_names %>% 
+    filter(State == "NY") %>% 
+    group_by(Year, Gender) %>% 
+    mutate(rank = rank(-Count)) %>% 
+    ungroup() %>% 
+    filter(rank <= 25) 
+
+spearman_rank_df_NY <- spearman_rank_df_NY %>% 
+  mutate(Year_plus_3 = Year + 3) %>%
+  left_join( spearman_rank_df_NY %>%
+      select(Name, Gender, Year, future_rank = rank),
+    by = c("Name", "Gender", "Year_plus_3" = "Year")) %>% 
+    filter(!is.na(future_rank)) %>% 
+    group_by(Year, Gender) %>% 
+    summarise(
+    corr_NY = cor(rank, future_rank, method = "spearman", use = "complete.obs"),
+    .groups = "drop")
+```
+
+Joining on the correlation calculated for names in New York, to the dataframe of the entire US name correlations
+```{r}
+spearman_rank_df <- left_join(x = spearman_rank_df, y = spearman_rank_df_NY, join_by(Year, Gender)) %>% rename(US = corr, NY = corr_NY) %>% 
+gather(Area, corr, c(US, NY))
+```
+
+```{r}
+persistance_graph <- spearman_rank_df %>% 
+    ggplot(aes(x=Year,y=corr,colour=Gender,linetype=Area))+
+	geom_line()+
+	theme_bw()+
+	geom_vline(xintercept=1990,linetype="longdash",alpha=0.6)+
+	geom_vline(xintercept=2003,alpha=0.6,linetype="longdash")+
+	scale_x_continuous(breaks=c(1910, 1925, 1950, 1975, 1990, 2003, 2011))+
+	labs(y='Persistence of names over time',title='Name persistence in the US ')
+
+persistance_graph
+```
+
+
+
+
+
