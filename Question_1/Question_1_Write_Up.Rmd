@@ -1,0 +1,92 @@
+---
+title: "Baby Name Analysis"
+author: "Matt Kruger - 25113186"
+#date: "November 2021"
+date: "`r Sys.Date()`"
+bibliography: Tex/ref.bib       # Do not edit: Keep this naming convention and location.
+output: 
+  pagedown::html_paged:
+    # template: wp_paged.html
+    # css: ['wp.css', 'wp-fonts.css', 'wp-page.css']
+    css: ["Template/default-fonts-Texevier.css", "Template/default-page-Texevier.css", "Template/default-Texevier.css"]
+    csl: Template/harvard-stellenbosch-university.csl # referencing format used.
+    template: ["Template/paged-Texevier.html"]
+
+    toc: true
+    # change to true for a self-contained document, but it'll be a litte slower for Pandoc to render
+    self_contained: TRUE
+#abstract: |
+    #This is an abstract. Much can be written here. Uncomment this line to go without an abstract.
+    #Abstracts have no spaces, but can have bullets.
+
+    #Bullets can be created as follows
+
+    #+ You can add bullets, but do not add colons please.
+
+    #+ Line breaks are also not permitted.
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+pacman::p_load(modelsummary, gt, knitr, kableExtra, tidyverse)
+```
+
+\newpage
+
+# Introduction {-}
+
+In this research paper I will conduct analysis on baby names in the United States. I analyse the persistence of names over the last century, as well as how famous figures in pop-culture influence naming conventions of the time.
+
+
+# Persistence of Names  {-}
+
++ I analyse name persistence by looking at the correlation between the ranking of the most popular names in a given period and the rankings of the most popular names three years later.
+
++ I investigate name persistence for the entirety of the United States, as well as for just New York, given that the toy design agency is based there.
+
+<!-- The following is a code chunk. It must have its own unique name (after the r), or no name. After the comma follows commands for R which are self-explanatory. By default, the code and messages will not be printed in your pdf, just the output: -->
+
+```{r name_persistence}
+name_persistence_plot <- knitr::include_graphics(path = "output/name_persistence_plot.png") 
+
+name_persistence_plot
+```
+
++ The plot above illustrates that there has always been variation in popular girl names over time in the entirety of the US. Boy names tend to have larger persistence, as can be seen by the more stable line which often lies above the line representing the persistence of girl names.
+
++ When investigating the companies suspicion of a drop off in name persistence after the 1990s, its evident that there is still much variation in girl names, but that has been seen throughout time. However, we see several plunges in the persistence of boy names after 1990, with a large continuing drop occurring since 2003. This is specific to the modern era, as before the 1990s, boy name persistence was relatively large and stable.
+
++ In New York, boy names tend to have an even higher persistence compared to the whole country, while girl names have even more variation. In New York, we only see a large plunge in the persistence of boy names after 2003.
+
++ These findings indicate that in the modern era, name persistence for either gender is lowering, as naming trends become more transitory. Thus, it is perhaps an unwise strategy for the agency to target product creation around current popular names, as by the time those products are actually on shelves, naming conventions are likely to have already changed.
+
+
+
+#  Influence of Popular Figures on Naming Conventions {-}
+
++ To analyse the influence of celebrities on pop culture, I created lists of the most famous: musicians, actors, and characters per decade. 
+
++ I created a popularity score for musicians based on their songs' peak rankings on the Billboard chart, as well as the total number of weeks in a decade they had a song on the chart. The table of the most popular musician/band per decade as well as their popularity score can be found below.
+
+```{r, out.height=250, out.width=225, fig.align='center'}
+knitr::include_graphics(path = "output/popular_artists_save.png")
+```
+
++ To find find some of the most popular actors and characters per decade, I found the most popular movie of each decade via their tmdb scores, and extracted the main cast from these movies.
+
++ From these lists I hand selected a list of some of the most famous celebrities over time: Charlie Chaplin, the Dorothy character from The Wizard of Oz, Elvis Presley, John Lennon(The Beatles), Paul McCartney(The Beatles), and Mariah Carey. 
+
++ The figure below plots the popularity of these names over time, and marks the decade in which the respective celebrity was most famous.
+
+```{r famous_names}
+famous_names_over_time_plot <- knitr::include_graphics(path = "output/famous_names_over_time_plot.png") 
+
+famous_names_over_time_plot
+```
+
++ The plot illustrates that it is not necessarily a case of celebrities massively influencing popular names for the time. This is especially true for characters, which can be seen from the line for Dorothy. John and Paul had already massively popular names, and so did not exert much influence over their popularitys. The exceptions to this rule would be Elvis Presley and Mariah Carey, who had notable influences on the popularity of their names in the decade they were most famous.
+
++ It can be seen for almost all celebrities, that even if they do have influence over the popularity of their names, this popularity always decreases by the next decade.
+
++ Thus, the toy agency can look at popular celebrities to attempt and predict naming trends. However, these trends will be temporary, and so toy production will have to be often changing if they do go with this strategy.

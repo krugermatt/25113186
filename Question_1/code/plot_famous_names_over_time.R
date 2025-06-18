@@ -21,13 +21,17 @@ plot_famous_names_over_time <- function(data, celebrity_names, label_decades,
 
         #Adds a point for each celebrity on the respective line which
         #matches up with their name, at the decade they were most famous
-        geom_point(data = label_data, aes(x = decade, y = Count), size = 2) +
+        geom_point(data = label_data, aes(x = decade, y = Count), size = 2
+                   , show.legend = F) +
 
         #Adds labels to those points of the respective celebrity names
         geom_text(data = label_data, aes(x = decade, y = Count, label = label),
-                  vjust = -0.5, size = 3) +
+                  vjust = -0.5, size = 3, show.legend = F) +
         scale_x_continuous(breaks = seq(start_year, end_year, 10)) +
-        theme(legend.position = "none")
+        labs(x = "Decade", y = "Log Number of Babies",
+        title = "Evolution of Famous Names Over Time", caption = "The dots represent the decade
+             in which the respective celebrity was most famous") +
+        theme(plot.title = element_text(hjust = 0.5))
 
     return(p)
 }
