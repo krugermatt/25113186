@@ -1,0 +1,79 @@
+---
+title: "Coldplay vs. Metallica Analysis"
+author: "Matt Kruger"
+#date: "November 2021"
+date: "`r Sys.Date()`"
+bibliography: Tex/ref.bib       # Do not edit: Keep this naming convention and location.
+output:
+  pagedown::html_paged:
+    # template: wp_paged.html
+    # css: ['wp.css', 'wp-fonts.css', 'wp-page.css']
+    css: ["Template/default-fonts-Texevier.css", "Template/default-page-Texevier.css", "Template/default-Texevier.css"]
+    csl: Template/harvard-stellenbosch-university.csl # referencing format used.
+    template: ["Template/paged-Texevier.html"]
+
+    toc: true
+    # change to true for a self-contained document, but it'll be a litte slower for Pandoc to render
+    self_contained: TRUE
+#abstract: |
+    #This is an abstract. Much can be written here. Uncomment this line to go without an abstract.
+    #Abstracts have no spaces, but can have bullets.
+
+    #Bullets can be created as follows
+
+    #+ You can add bullets, but do not add colons please.
+
+    #+ Line breaks are also not permitted.
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+pacman::p_load(modelsummary, gt, knitr, kableExtra, tidyverse)
+```
+
+\newpage
+
+# Introduction {-}
+
+In this report, I will compare the popularity and musical trends that the bands Coldplay and Metallica have experienced over time. I will first look at the evolution of their popularity over time. I will then investigate how the "danceability" of the general music industry has changed over time, and look into whether either of the bands have followed the same trend.
+
+# Popularity {-}
+
+The graph below indicates the evolution of Coldplay's popularity 
+```{r}
+knitr::include_graphics(path = "output/Coldplay_boxplot.png")
+```
+
+The graph below indicates the evolution of Metallica's popularity
+```{r}
+knitr::include_graphics(path = "output/Metallica_boxplot.png")
+```
+
++ The Coldplay boxplot illustrates that the band maintained high popularity in the first half of their career. Their success has dipped toward the back half of their career, but it does seem as though it is making a recovery with their last few albums.
+
++ The Metallica boxplot indicates that they were able to maintain a more stable popularity than Coldplay. However, their fame did take a slight knock just before the halfway point of their career, but it seems as though they have stabilised at this level, except for the "Lulu" album being a particular low point.
+
++ It is difficult to directly compare the success of these two bands. Coldplay has much variation in the receival of their albums, with high peaks, but equally low troughs. Metallica on the other hand has kept a more stable popularity throughout their career, but they never quite manage to reach the same highs as Coldplay.
+
+# Danceability {-}
+
+In this section of analysis, I investigate the trend of danceability within the music industry. In order to ascertain a general trend within the music industry, I firstly analyse the danceability of popular songs since Metallica first started producing music. The bubble plot below illustrates how the level of danceability has changed in music over time, and what impact danceability has on popularity. 
+
+```{r}
+knitr::include_graphics(path = "output/dance_popularity_time_plot.png")
+```
+
++ The colour of the bubbles indicate whether a song has a higher popularity score than the average popularity score of famous songs. The popularity score is calculated by dividing the total number of weeks a song was on the Billboard Charts by the peak ranking it achieved whilst on the charts. Thus, the higher the peak ranking, and the longer the song stayed on the charts, the higher the popularity score. 
+
++ The graph illustrates that there has potentially been a very slight increase in the danceability of music over time. However, it is certainly not a pronounced trend. What is apparent though, is that the popularity of danceable music has increased over time.
+
+The lollipop plots below track the average danceability of Coldplay and Metallica albums over time, in order to discover whether the trend of danceable music influenced the bands at all.
+
+```{r}
+knitr::include_graphics(path = "output/lollipop_dance_plot.png")
+```
+
++ The lollipop plots show that neither band has ever made particularly danceable music when compared to the rest of the industry. When analysing the bubble plot, there is a thick distribution of songs with danceability between 0.6 and 0.8. Whereas both Coldplay and Metallica albums mostly have a danceability under 0.5.
+
++ The plots also indicate that the rise in popularity of danceability in the overall music industry never affectd either band, with both of their average danceabilities following a horizontal trend.

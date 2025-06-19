@@ -126,7 +126,7 @@ popular_artists <- music_charts %>%
     filter(weeks_on_board == max(weeks_on_board)) %>% 
     ungroup()  %>% 
     
-    #Using my song_ranking function to calculate an overall song ranking. It divides the total number of weeks a song was on the chart by the songs peak rank(so songs which got a high ranking(lower number) and a large number of weeks on the charts will have a high overall ranking)
+    #Using my song_ranking function to calculate an overall song ranking. It divides the total number of weeks a song was on the chart by the songs peak rank(so songs which got a high peak ranking(lower number) and a large number of weeks on the charts will have a high overall ranking). This score is then added as a new column to the dataframe
     song_ranking(weeks_on_board, peak_rank) %>% 
     group_by(artist, decade) %>% 
     

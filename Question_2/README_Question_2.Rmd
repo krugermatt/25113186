@@ -1,0 +1,212 @@
+---
+title: "README_Question_2"
+author: "Matt Kruger"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 2
+
+Installing all necessary packages
+```{r}
+install.packages("pacman")
+pacman::p_load("tidyverse")
+pacman::p_load("lubdridate")
+pacman::p_load("stringr")
+pacman::p_load("ggridges")
+pacman::p_load("patchwork")
+pacman::p_load("stargazer")
+pacman::p_load("gt")
+pacman::p_load("webshot")
+webshot::install_phantomjs()
+pacman::p_load("webshot2")
+pacman::p_load("forcats")
+pacman::p_load("ggsci")
+pacman::p_load("readr")
+```
+
+Reading in the data
+```{r}
+coldplay <- read.csv("../data/PracData25/Coldplay_vs_Metallica/Coldplay.csv", header = T)
+metallica <- read.csv("../data/PracData25/Coldplay_vs_Metallica/metallica.csv", header = T)
+charts <- read_rds("../data/PracData25/Coldplay_vs_Metallica/charts.rds")
+spotify <- read_rds("../data/PracData25/Coldplay_vs_Metallica/Broader_Spotify_Info.rds")
+```
+
+Loading in functions
+```{r}
+list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
+```
+
+
+Wrangling the coldplay data for the album popularity boxplot,by using my live_filter function which filters out any live songs. Also using my release_date_converter function to change release_date into type "date"
+```{r}
+coldplay_boxplot_df <- coldplay %>% 
+    live_filter(.)  %>% 
+    release_date_converter(.)
+```
+
+Wrangling the data in the same manner as above with a few extra adjustments relating to album selection so that the dataset contains only one type of each album
+```{r}
+metallica_boxplot_df <- metallica %>% 
+    live_filter(.) %>% 
+    release_date_converter(.) %>% 
+    rename(album_name = album) %>% 
+    #Filtering out any Deluxe albums, as they were not a ubiquitous album type across albums
+    filter(!str_detect(string = album_name, pattern = "Deluxe")) %>% 
+    
+    #Filtering out versions other than the original of "And Justice for All"
+    filter(!album_name == "...And Justice for All (Remastered)") %>% 
+    filter(!album_name == "And Justice for All (Remastered)") %>% 
+    filter(!album_name == "And Justice for All (Remastered)") %>% 
+    
+    #Filtering out versions of albums where we have the original
+    filter(!album_name == "Metallica (Remastered 2021)") %>% 
+    filter(!album_name == "Some Kind Of Monster (Live)") %>% 
+    filter(!album_name == "Metallica (Remastered)") %>% 
+    
+    #Some observations of Garage, Inc. had a typo where the comma was left out - fixing that so all observations have the same album name
+    mutate(album_name = recode(album_name, "Garage Inc." = "Garage, Inc.")) %>% 
+    
+    #Shortening this album name, as it throws off the proportions of the boxplot
+    mutate(album_name = recode(album_name, "Metallica Through The Never (Music From The Motion Picture)" = "Metallica Through The Never"))
+```
+
+Using my album_popularity_boxplot function to create boxplots of Coldplay and Metallica albums over time. It takes a dataframe with an album_name, release_date, and popularity column as an argument. It also takes several label arguments. It orders albums by release date using the forecats package before it plots the graph. 
+```{r}
+#Coldplay plot
+coldplay_boxplot <- album_popularity_boxplot(data = coldplay_boxplot_df, x_lab = "Album", y_lab = "Popularity", title = "Popularity of Coldplay Albums Over Time", caption = "Albums are ordered from earliest release date")
+
+#Saving the Coldplay boxplot to my output folder
+ggsave(filename = "Coldplay_boxplot.png", path = "output/", plot = coldplay_boxplot, device = "png")
+
+#Metallica plot
+metallica_boxplot <- album_popularity_boxplot(data = metallica_boxplot_df, x_lab = "Album", y_lab = "Popularity", title = "Popularity of Metallica Albums Over Time", caption = "Albums are ordered from earliest release date")
+
+#Saving my Metallica boxplot to my output folder
+ggsave(filename = "Metallica_boxplot.png", path = "output/", plot = metallica_boxplot, device = "png")
+```
+
+Wrangling the data in the aim of combining the spotify and charts dataframes
+```{r}
+#Getting a vector of the songs which are in the spotify dataframe
+comparison_songs <- spotify %>% 
+    pull(name)
+
+
+charts <- charts %>% 
+    #Filtering charts dataframe for only the songs which are also in the spotify data frame
+    filter(song %in% comparison_songs) %>% 
+    
+    #The spotify data frame only has the main artist of a song listed, thus filtering the charts dataframe so that it conforms to the same standard, making joining the two dataframes easier
+    mutate(artist = str_remove(artist, regex(" featuring .*", ignore_case = T))) %>%
+    mutate(artist = str_remove(artist, regex(" & .*", ignore_case = T))) %>% 
+    mutate(artist = str_remove(artist, regex(" With .*", ignore_case = T))) %>% 
+     mutate(artist = str_remove(artist, regex(" X .*", ignore_case = T)))
+    
+#renaming spotify's name column so that it matches with charts, in order to make joing the dataframes possible
+spotify <- spotify %>% 
+    rename(song = name)
+```
+
+Joining the spotify and charts dataframe together and mutating it to make it more usable
+```{r}
+complete_songs <- left_join(spotify, charts, join_by(song, artist))
+
+#reanming certain variables to fit R naming norms
+complete_songs <- complete_songs %>% 
+    group_by(song) %>% 
+    rename(weeks_on_board = `weeks-on-board`, peak_rank = `peak-rank`) %>% 
+    
+    #Filtering so that each song only has one observation which tells us the maximum number of weeks it was on the charts for
+    filter(weeks_on_board == max(weeks_on_board)) %>% 
+    
+    #Using my song_ranking function to calculate an overall song ranking. It divides the total number of weeks a song was on the chart by the songs peak rank(so songs which got a high peak ranking(lower number) and a large number of weeks on the charts will have a high overall ranking). This score is then added as a new column to the dataframe 
+    song_ranking(weeks_on_board, peak_rank)
+```
+
+Creating a dataframe which will be used to create a danceability vs. popularity over time bubble plot
+```{r}
+complete_songs_bubble_df <- complete_songs %>% 
+    #Selecting only the variables which are relevant to creating the plot
+    select(song, year, danceability, overall_song_rank, popular, date) %>% 
+    
+    #The end goal is to analyse the difference in Metallica and Coldplay's danceability over time to see if they conformed to music trends, and so only wanted to look at songs since one of these bands' first release(Which was Metallica in 1983)
+    filter(date >= lubridate::ymd(19830101)) %>% 
+    
+    #The dataframe contained a huge amount of songs with a low overall score. This made the plot extremely cluttered, but also takes a way from analysis into what trends were for very popular songs. Thus I only keep songs which had an overall score larger than 14
+    filter(overall_song_rank >= 15)
+    
+#Calculating the mean score of songs left in the datafram after the above filtering process
+mean_song_rank <- complete_songs_bubble_df %>% 
+    pull(overall_song_rank) %>% 
+    mean()
+
+complete_songs_bubble_df <- complete_songs_bubble_df %>% 
+    
+    #Creating a binary variable which states that a song is "Popular" if above the mean of the overall score, or "Unpopular" if below the mean of the overall score
+    mutate(popular = ifelse(overall_song_rank >= ceiling(mean_song_rank), "Popular", "Unpopular")) %>% 
+    #Turning into a factor variable so that the color scheme can be created manually in the plot
+    mutate(popular = factor(popular))
+```
+
+Using my bubble_time_plot for the creation of the danceability vs. popularity in songs over time plot. This illustrates the trend in danceability in songs over time, and the trend in how popular danceability in songs is over time. The function takes a dataframe which need to have a date column and a binary popularity column as an argument. 
+```{r}
+dance_popularity_time_plot <- bubble_time_plot(data = complete_songs_bubble_df, 
+                                               date_col = date, 
+                                               y_axis = danceability,
+                                               size = overall_song_rank,
+                                               color_popular = popular,
+                                               x_lab = "Year",
+                                               y_lab = "Danceability",
+                                               title = "Danceability vs Popularity in Songs Over Time", caption = "The larger the bubble, the more popular the song"
+                                               ) 
+
+#Saving my danceability vs. popularity over time bubble plot to my output folder
+ggsave(filename = "dance_popularity_time_plot.png", path = "output/", plot = dance_popularity_time_plot, device = "png")
+```
+
+Creating dataframes to track the average danceability of Coldplay and Metallica albums over time using my average_danceability function.
+```{r}
+
+#Creating a dataframe for Coldplay
+coldplay_dance_plot_df <- coldplay %>% 
+    #My average danceability function calculates the average danceability per album, and tweaks the dataframe so that it just contains the album name, the release date, and the avearge danceability for that album
+    average_danceability(.) %>% 
+    #turning the release_date variable into a "date" object so that it can be plot on the x-axis of the graphs smoothly
+    mutate(release_date = ymd(release_date))
+
+#Creating a dataframe for Metallica. Same process as above
+metallica_dance_plot_df <- metallica %>% 
+    rename(album_name = album) %>% 
+    average_danceability(.) %>% 
+    mutate(release_date = ymd(release_date))
+```
+
+Using my time_lollipop_plot function to create lollipop graphs which track the changes in the average danceability per album. It takes a dataframe with a date column as an argument. One plot is made for each band, and then combined using patchwork.
+```{r}
+#Coldplay plot
+coldplay_dance_time_plot <- time_lollipop_plot(data = coldplay_dance_plot_df,
+                                                date_col = release_date,
+                                                y_axis = average_danceability,
+                                                y_lab = "Average Danceability Per Coldplay Album")
+
+
+#Metallica plot
+metallica_dance_time_plot <- time_lollipop_plot(data = metallica_dance_plot_df,
+                                                date_col = release_date,
+                                                y_axis = average_danceability,
+                                                x_lab = "Year",
+                                                y_lab = "Average Danceability Per Metallica Album")
+
+
+lollipop_dance_plot <- coldplay_dance_time_plot / metallica_dance_time_plot + plot_annotation(title = "Coldplay vs. Metallica Danceability Over Time", theme = theme(plot.title = element_text(hjust = 0.5)))
+
+#Saving my lollipop danceability plot to my output folder
+ggsave(filename = "lollipop_dance_plot.png", path = "output/", plot = lollipop_dance_plot, device = "png")
+```
+
