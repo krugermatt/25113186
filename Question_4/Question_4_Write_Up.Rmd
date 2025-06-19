@@ -1,0 +1,55 @@
+---
+title: "Billionaires report"
+author: "Matt Kruger"
+#date: "November 2021"
+date: "`r Sys.Date()`"
+bibliography: Tex/ref.bib       # Do not edit: Keep this naming convention and location.
+output:
+  pagedown::html_paged:
+    # template: wp_paged.html
+    # css: ['wp.css', 'wp-fonts.css', 'wp-page.css']
+    css: ["Template/default-fonts-Texevier.css", "Template/default-page-Texevier.css", "Template/default-Texevier.css"]
+    csl: Template/harvard-stellenbosch-university.csl # referencing format used.
+    template: ["Template/paged-Texevier.html"]
+
+    toc: true
+    # change to true for a self-contained document, but it'll be a litte slower for Pandoc to render
+    self_contained: TRUE
+#abstract: |
+    #This is an abstract. Much can be written here. Uncomment this line to go without an abstract.
+    #Abstracts have no spaces, but can have bullets.
+
+    #Bullets can be created as follows
+
+    #+ You can add bullets, but do not add colons please.
+
+    #+ Line breaks are also not permitted.
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+pacman::p_load(modelsummary, gt, knitr, kableExtra, tidyverse)
+```
+
+\newpage
+
+# Introduction {-}
+
+In this report I will investigate the claim that the USA's billionaires are made up of a larger proportion of self-made billionaires, than is seen in the rest of the world. I will conduct this analysis via a waffle chart.
+
+
+# Self-Made Billionaires {-}
+
+The waffle plot below illustrates the proportion of billionaires that are self-made for both the USA and the rest of the world.
+
+```{r}
+knitr::include_graphics(path = "output/waffle_plot.png")
+```
+
+The waffle plot illustrates that the United States has indeed had a growth in the proportion of their billionaires being self-made. In 1996 the proportion of self-made billionaires in the rest of the world was larger than the proportion of self-made billionaires in the United States, but by 2001 the United States had already reversed this trend and it has been maintained up until 2014.
+
+
+
+
+

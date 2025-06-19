@@ -36,6 +36,11 @@ titles <- read_rds(file = "../data/PracData25/netflix/titles.rds")
 HBO <- read_rds(file = "../data/PracData25/US_Baby_names/HBO_titles.rds")
 ```
 
+Loading in functions
+```{r}
+list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
+```
+
 Creating a dataframe which I will use to create a regression in order to see the factors which affect movie popularity
 ```{r}
 #Creatng a vector of all the movie names which are on Netflix

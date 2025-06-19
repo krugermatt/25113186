@@ -9,4 +9,63 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Loading packages
+```{r}
+install.packages("pacman")
+pacman::p_load("tidyverse")
+pacman::p_load("lubdridate")
+pacman::p_load("stringr")
+pacman::p_load("ggridges")
+pacman::p_load("patchwork")
+pacman::p_load("stargazer")
+pacman::p_load("gt")
+pacman::p_load("webshot")
+webshot::install_phantomjs()
+pacman::p_load("webshot2")
+pacman::p_load("forcats")
+pacman::p_load("ggsci")
+pacman::p_load("readr")
+pacman::p_load("huxtable")
+pacman::p_load("waffle")
+```
+
+Loading in data
+```{r}
+data <- read.csv(file = "../data/PracData25/Billions/billionaires.csv", header = T)
+```
+
+Loading in functions
+```{r}
+list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
+```
+
+Creating the dataframe for the waffle plot
+```{r}
+waffle_plot_df <- data %>% 
+    
+    #Creates a binary variable which states whether a country is the USA or not
+    mutate(US = ifelse(location.country.code == "USA", "USA", "Other")) %>% 
+    group_by(year, US) %>% 
+    
+    #Calculating proportion of self-made billionaires in US vs. the rest of the world
+    summarise(
+    non_inheritance_proportion = mean(wealth.how.inherited == "not inherited") * 100
+  )
+```
+
+Creating a waffle chart
+```{r}
+waffle_chart <- waffle_plot_df %>% 
+    ggplot(aes(fill = US, values = non_inheritance_proportion)) +
+    geom_waffle(color = "white", size = 1.125, n_rows = 6) +
+    facet_wrap(~year, ncol = 1) +
+    theme_bw()
+
+#Saving the waffle chart to my output folder
+ggsave(filename = "waffle_plot.png", plot = waffle_chart, path = "output/", device = "png")
+```
+
+
+
+
 
