@@ -1,0 +1,75 @@
+---
+title: "README_Question_5"
+author: "Matt Kruger"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading packages
+```{r}
+install.packages("pacman")
+pacman::p_load("tidyverse")
+pacman::p_load("lubdridate")
+pacman::p_load("stringr")
+pacman::p_load("ggridges")
+pacman::p_load("patchwork")
+pacman::p_load("stargazer")
+pacman::p_load("gt")
+pacman::p_load("webshot")
+webshot::install_phantomjs()
+pacman::p_load("webshot2")
+pacman::p_load("forcats")
+pacman::p_load("ggsci")
+pacman::p_load("readr")
+pacman::p_load("huxtable")
+pacman::p_load("waffle")
+pacman::p_load("hexbin")
+```
+
+Reading in data
+```{r}
+health_data <- read.csv(file = "../data/PracData25/Health/HealthCare.csv", header = T)
+```
+
+Loading in functions
+```{r}
+list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
+```
+
+Changing categorical variables into factors using my factor_transformation function. This function also allows for manual setting of a reference category, which helps in the process of an interpretable regression.
+```{r}
+regression_df <- health_data %>% 
+    factor_transformation(Sleep.Quality, "Fair") %>% 
+    factor_transformation(Physical.Activity.Level, "Moderately Active") %>% 
+    factor_transformation(Gender, "M")
+```
+
+Creating a regression to determine the factors which affect weight change. Stress, excercise level, sleep quality, and caloric surplus are being investigated as potential important factors. The interaction between stress and age, gender, and sleep quality are being investigated as well, as stress can have compounding affects with different values of these variables. I also control for age, gender, and starting weight as these will all have an important impact on weight change.
+```{r}
+weight_change_reg <- regression_df %>% 
+    lm(formula = Weight.Change..lbs. ~ Stress.Level + Age + Sleep.Quality + Physical.Activity.Level + Gender + Daily.Caloric.Surplus.Deficit + Current.Weight..lbs. + Stress.Level:Age + Stress.Level:Gender + Stress.Level:Sleep.Quality)
+```
+
+
+
+```{r}
+density_plot_df <- regression_df %>% 
+    mutate(sleep_score = as.numeric(factor(Sleep.Quality,
+                                         levels = c("Poor", "Fair", "Good", "Excellent"),
+                                         ordered = TRUE)))
+```
+
+Wanted to create a 2d density plot to investigate whether there was a high correlation between stress levels and quality of sleep, as it can be hypothesized that there's a two way causal effect between these variables. It doesn't work out perfectly with the two variables being discrete, but it does still show that poor sleep is correlated with higher stress levels, whilst good quality sleep is less correlated with higher stress levels. We can also see from the count values that most of the people in our data get poor quality sleep.
+```{r}
+sleep_stress_2D_density_plot <- density_plot(data = density_plot_df, x = sleep_score, y = Stress.Level, x_lab = "Quality of Sleep", y_lab = "Stress Level", title = "2D Density Plot Between Sleep Quality And Stress Level")
+
+ggsave(filename = "sleep_stress_2D_density_plot.png", path = "output/", plot = sleep_stress_2D_density_plot, device = "png")
+```
+
+
+
+
