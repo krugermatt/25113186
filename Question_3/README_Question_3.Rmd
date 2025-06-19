@@ -9,4 +9,146 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Loading packages
+```{r}
+install.packages("pacman")
+pacman::p_load("tidyverse")
+pacman::p_load("lubdridate")
+pacman::p_load("stringr")
+pacman::p_load("ggridges")
+pacman::p_load("patchwork")
+pacman::p_load("stargazer")
+pacman::p_load("gt")
+pacman::p_load("webshot")
+webshot::install_phantomjs()
+pacman::p_load("webshot2")
+pacman::p_load("forcats")
+pacman::p_load("ggsci")
+pacman::p_load("readr")
+pacman::p_load("huxtable")
+```
+
+Reading in the data
+```{r}
+netflix <- read.csv(file = "../data/PracData25/netflix/netflix_movies.csv", header = T)
+credits <- read_rds(file = "../data/PracData25/netflix/credits.rds")
+titles <- read_rds(file = "../data/PracData25/netflix/titles.rds")
+HBO <- read_rds(file = "../data/PracData25/US_Baby_names/HBO_titles.rds")
+```
+
+Creating a dataframe which I will use to create a regression in order to see the factors which affect movie popularity
+```{r}
+#Creatng a vector of all the movie names which are on Netflix
+netflix_movies <- netflix %>% 
+    filter(type == "Movie") %>% 
+    pull(title)
+
+#Filtering the titles dataframe to only contain movies which are on Netflix
+netflix_titles <- titles %>% 
+    filter(title %in% netflix_movies) %>% 
+    #Only slecting the variables which I need from the titles dataframe
+    select(title, imdb_score, tmdb_popularity, genres)
+
+#Creating the dataframe for the regression by joining the filtered titles datafram with the Netflix dataframe
+regression_df <- left_join(netflix_titles, netflix, by = "title") %>% 
+    
+    #Removing the word "min" from all duration observations and turning it into a numeric variable
+    mutate(duration = as.numeric(str_remove(duration, " min"))) %>% 
+    
+    #Filtering out a wrongly recorded rating variable
+    filter(!rating == "84 min")
+```
+
+Only keeping the top 5 most popular countries where movies are produced, as these are likely to have the most significant impact on the popularity of a movie. I do this by using my top_5_x function which outputs the top 5 most popular observations for a variable.
+```{r}
+top_5_countries <- regression_df %>% 
+    top_5_x(country)
+
+#Filtering the regression dataframe to only contain movies made in the top 5 most popular countries
+regression_df <- regression_df %>% 
+    semi_join(top_5_countries, by = "country")
+```
+
+Cleaning up the genres variable by firstly ensuring that each observation has only one genre assigned to it. Many of the same genres had two types of observation, one with a leading space and one without.I used my remove_leading_space function to ensure all observations for one genre were the same. I then also selected the top 5 most common genres and filtered the regression dataframe to only contain these, as they are likely to have the most significant effect on the popularity of a movie. 
+```{r}
+regression_df <- regression_df %>% 
+    #Ensuring that all genre observations were represented by one clean word
+     mutate(genres = str_remove_all(genres, "\\[|\\]|'|\"")) %>% 
+    separate_rows(genres, sep = ",") %>% 
+    
+    #Unifying all typos, so that each genre had one observation type
+    remove_leading_space(genres, "drama") %>% 
+    remove_leading_space(genres, "comedy") %>% 
+    remove_leading_space(genres, "action") %>% 
+    remove_leading_space(genres, "romance") %>% 
+    remove_leading_space(genres, "crime")
+
+#Identifying top 5 genres
+top_5_genres <- regression_df %>% 
+    top_5_x(genres)
+
+#Filtering the regression dataframe to contain only the movies in the top 5 genres
+regression_df <-regression_df %>% 
+    semi_join(top_5_genres, by = "genres")
+```
+
+Obtaining the top 5 most common ratings and filtering the regression dataframe to only contain movies with these ratings, as they are likely to have the most significant effect on the popularity of a movie.
+```{r}
+top_5_ratings <- regression_df %>% 
+    top_5_x(rating)
+
+regression_df <- regression_df %>% 
+    semi_join(top_5_ratings, by = "rating")
+```
+
+Using my factor_transformation function to ensure all categorical variables are factors, and manually set the reference category. This makes the following regression more interpretable and customizable.
+```{r}
+regression_df <- regression_df %>% 
+     factor_transformation(country, "United States") %>% 
+    factor_transformation(genres, "drama") %>% 
+    factor_transformation(rating, "TV-MA")
+```
+
+Creating the regression. I analyse the effects of country, genre, movie length, imdb score, the year of release(in order to control for time effects), and rating
+```{r}
+movie_regression <- regression_df %>% 
+    lm(formula = tmdb_popularity ~ country + genres + duration + imdb_score + release_year + rating)
+```
+
+Creating a regression table using the huxtable package 
+```{r}
+regression_table <- huxreg(
+  "Popularity" = movie_regression,         
+  number_format = "%.2f",   #Rounds all values to two decimal places                
+  align = ".",   #aligns values by decimal point                           
+  omit_coefs = "release_year",             
+  stars = c(`***` = 0.001, `**` = 0.01, `*` = 0.05)
+)
+
+quick_html(regression_table, file = "regtable.html")
+webshot("regtable.html", file = "output/regtable.png")
+```
+ 
+Creating a dataframe for the ridgeline plot 
+```{r}
+ridgeline_df <- regression_df %>% 
+    #Anlysing more recent movies for relevance
+    filter(release_year >= 2010) %>% 
+    
+    #Only a few outliers outside of this range which made the graph uninterpretable
+    filter(tmdb_popularity <= 30)
+```
+
+Creating the ridgeline plot of the distribution of popularity scores for different gernes of movies using my ridgeline function
+```{r}
+genre_ridgeline <- ridgeline(ridgeline_df, x_axis = tmdb_popularity, y_axis = genres, x_lab = "Popularity", y_lab = "Genres", title = "Distribution of Scores Per Genre")
+
+#saving my ridgeline plot to my output folder
+ggsave(filename = "ridgeline.png", path = "output/", plot = genre_ridgeline, device = "png")
+```
+
+
+
+
+
 

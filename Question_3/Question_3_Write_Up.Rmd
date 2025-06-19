@@ -1,0 +1,78 @@
+---
+title: "Streaming Report"
+author: "Matt Kruger"
+#date: "November 2021"
+date: "`r Sys.Date()`"
+bibliography: Tex/ref.bib       # Do not edit: Keep this naming convention and location.
+output:
+  pagedown::html_paged:
+    # template: wp_paged.html
+    # css: ['wp.css', 'wp-fonts.css', 'wp-page.css']
+    css: ["Template/default-fonts-Texevier.css", "Template/default-page-Texevier.css", "Template/default-Texevier.css"]
+    csl: Template/harvard-stellenbosch-university.csl # referencing format used.
+    template: ["Template/paged-Texevier.html"]
+
+    toc: true
+    # change to true for a self-contained document, but it'll be a litte slower for Pandoc to render
+    self_contained: TRUE
+#abstract: |
+    #This is an abstract. Much can be written here. Uncomment this line to go without an abstract.
+    #Abstracts have no spaces, but can have bullets.
+
+    #Bullets can be created as follows
+
+    #+ You can add bullets, but do not add colons please.
+
+    #+ Line breaks are also not permitted.
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+pacman::p_load(modelsummary, gt, knitr, kableExtra, tidyverse)
+```
+
+\newpage
+
+# Introduction {-}
+
+In this report I will analyse what leads a movie to being popular on Netflix. Firstly I will create an OLS regression to determine the effects of several factors on a movies popularity. As an alternative form of analysis, I also create a ridgeline graph to investigate the distribution of popularity for different genres of movies.
+
+# OLS Regression  {-}
+
+In order to determine the factors which most affect a movies popularity, I will use OLS to regress a movie's popularity on the country it was made in, the genre of the movie, the length of the movie, the imdb score of the movie(as this is more critics based as is likely to affect some viewers watching decisions), and the age restriction of the movie. I also include the year of release in order to control for time effects. However, as it is not a factor which affects popularity I leave it out of the regression table. For each of the categorical variables, I only conduct analysis on the top five most common observations, as those are likely to have the most significant effect on a movie's popularity.
+
+The table below presents the results of the regression
+
+```{r}
+knitr::include_graphics(path = "output/regtable.png")
+```
+
++ For the factor variables: country, genre, and rating, the reference categories: United States, drama, and TV-MA are used respectively.
+
++ The table illustrates that movies made in India, the Philippines, or the United Kingdom are associated with a statistically significantly lower popularity rating than movies made in the United States.
+
++ Action movies are associated with a statistically significantly higher popularity score compared to drama movies, whilst on average comedy movies have a lower popularity score
+
++ Ratings PG-13 and R are both statistically significatly related with a higher popularity score than movies rated TV-MA.
+
++ These results indicate that the company should prioritise investing in movies made in the United States, action movies, and movies which are targeted completely towards children or completely towards adults.
+
+
+
+
+#  Ridgeline {-}
+
+The ridgeline plot below illustrates the distribution of popularity scores for the top five most common movie genres on Netflix:
+
+```{r}
+knitr::include_graphics(path = "output/ridgeline.png")
+```
+
++ Out of all the peaks of the distributions, the action and crime genres have the highest score. Crime movies in particular have a significant distribution which extends into the higher popularity scores.
+
++ On the other hand, the drama genre's distribution is particularly right-skewed.
+
++ These results indicate that the company should focus investment into the crime and action genres.
+
+
